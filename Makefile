@@ -85,6 +85,10 @@ test: $(TEST_BINS)
 # .clang-tidy, which is part of the coding standard and under version control.
 # ---------------------------------------------------------------------------
 CLANG_TIDY ?= clang-tidy
+# The analyzer passes belong to clang, not to the C compiler. On macOS `cc` is
+# clang, but on Linux it is gcc, which has no --analyze; deriving it from $(CC)
+# would make `make analyze` fail there.
+CLANG      ?= clang
 SDKROOT    ?= $(shell xcrun --show-sdk-path 2>/dev/null)
 SYSROOT_FLAG = $(if $(SDKROOT),-isysroot $(SDKROOT),)
 
@@ -96,8 +100,8 @@ ANALYZE_SRC = $(SRC_DIR)/toxrelayer.c $(SRC_DIR)/commands.c $(SRC_DIR)/groupchat
 analyze:
 	@echo "  ANALYZE clang static analyzer"
 	@for f in $(ANALYZE_SRC); do \
-		$(CC) -std=c11 --analyze -Xanalyzer -analyzer-output=text -Isrc \
-			$(filter-out -g,$(CFLAGS)) $$f 2>&1 | grep -E 'warning:|error:' || true; \
+		$(CLANG) -std=c11 --analyze -Xanalyzer -analyzer-output=text -Isrc \
+			$(SYSROOT_FLAG) $(filter-out -g,$(CFLAGS)) $$f 2>&1 | grep -E 'warning:|error:' || true; \
 	done
 	@echo "  ANALYZE clang-tidy"
 	@$(CLANG_TIDY) $(ANALYZE_SRC) --quiet -- \
@@ -110,8 +114,8 @@ CLEAN_SRC = $(ANALYZE_SRC)
 analyze-strict:
 	@echo "  ANALYZE (strict gate: analyzer)"
 	@for f in $(CLEAN_SRC); do \
-		$(CC) -std=c11 --analyze -Xanalyzer -analyzer-output=text -Isrc \
-			$(filter-out -g,$(CFLAGS)) $$f || exit 1; \
+		$(CLANG) -std=c11 --analyze -Xanalyzer -analyzer-output=text -Isrc \
+			$(SYSROOT_FLAG) $(filter-out -g,$(CFLAGS)) $$f || exit 1; \
 	done
 	@echo "  ANALYZE (strict gate: clang-tidy)"
 	@$(CLANG_TIDY) $(CLEAN_SRC) --quiet -- \

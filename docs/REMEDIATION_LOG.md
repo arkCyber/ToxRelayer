@@ -605,6 +605,7 @@ files were under version control.
 | D-62 | Publishing would have included `toxbot.tox`, the private key that *is* the bot's identity, had `.gitignore` not happened to cover it | `*.tox` rule only | Confirmed ignored, and now documented as operator data with a comment explaining why it can never be committed |
 | D-63 | `.github/FUNDING.yml` advertised the upstream author's sponsorship account | file contents | Removed |
 | D-64 | No CI, no contribution or security guidance, no issue or pull request templates, no editor or whitespace configuration | absent from the tree | Added |
+| D-65 | The `analyze` targets drove the clang static analyzer through `$(CC)`. On macOS `cc` is clang so this worked; on Linux `cc` is gcc, which has no `--analyze`, so the analysis job would have failed for every Linux user and in CI | `make analyze` on a machine where `cc` is gcc | Fixed: the analyzer now uses an explicit `CLANG ?= clang` |
 
 ### What changed
 
