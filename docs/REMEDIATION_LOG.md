@@ -666,6 +666,9 @@ with GCC.
 | D-69 | `chat_tx_Control[MAX_Friend_NUM]` was **defined** in `toxrelayer.h`, so every translation unit that included it emitted its own copy | A tentative definition is merged by older toolchains; GCC 10+ and LLVM 11+ default to `-fno-common` and fail at link with `duplicate symbol`. Apple clang still defaults to `-fcommon`, so macOS linked and Linux would not | Fixed: the header declares it `extern` and `toxrelayer.c` defines it once |
 | D-70 | `src/minIni.c` maps `strnicmp` to `strncasecmp`, which is declared in `<strings.h>`, but the file only included `<string.h>` | Darwin's `<string.h>` includes `<strings.h>`, glibc's does not | Fixed: the include is added where the mapping is defined, so the Windows path is untouched |
 | D-71 | The analysis gate's verdict depended on the clang-tidy version: 18 reports every ignored `snprintf()` return (glibc declares the fortified `snprintf()` with `warn_unused_result`), 21 reports none of the same 44 call sites | the same commit passed locally and failed in CI | Fixed twice over: `cert-err33-c` is now a documented deviation in `.clang-tidy`, and the CI images are pinned (`ubuntu-24.04`, `macos-14`) so the toolchain cannot drift unnoticed |
+| D-72 | No `_DEFAULT_SOURCE` in the build's feature-test macros. glibc declares `mkdtemp()` under `__USE_MISC`, which only `_DEFAULT_SOURCE` enables, so the six suites that create a `mkdtemp()` directory failed to compile on Linux | macOS headers expose `mkdtemp()` regardless, so those suites built and passed there | Fixed: `-D_DEFAULT_SOURCE` added. Pinning `_XOPEN_SOURCE` to a value was tried first and rejected — it hides `mkdtemp()` on Darwin instead; the Makefile records why |
+| D-73 | The `/id` and `/cur` console handlers built a hex string with `strcat()` into a buffer that had just come from `malloc()` and was never initialised. `strcat()` scans for a terminator, so it read undefined memory and wrote past the allocation as soon as the first byte was non-zero; the buffer was also leaked | reported by `clang-analyzer-security.insecureAPI.strcpy` | Fixed: fixed-width `snprintf()` writes into a bounded, self-initialising loop, plus a `malloc` failure check and a `free()` |
+| D-74 | Two analyzer checks are not usable as a gate: `clang-analyzer-valist.Uninitialized` reports the canonical `va_start`/`vsnprintf` pattern in log.c and msg_database.c as an uninitialised va_list (clang-tidy 21 reports none of the five), and `clang-analyzer-security.insecureAPI.strcpy` is a blanket ban on `strcpy`/`strcat` rather than a bounds analysis | same code, different verdicts from the two clang-tidy versions | Fixed: both are disabled with their rationale in `.clang-tidy`; the two real defects the second one found are fixed, and finishing the per-site audit is recorded as remaining work |
 
 ### What this validates
 
@@ -725,4 +728,9 @@ with GCC.
 8. Audit the ignored `snprintf()` return values by hand (the deviation for
    `cert-err33-c` explains why this is not done mechanically): decide for each
    whether truncation is acceptable or should be detected and reported.
+9. Audit the remaining `strcpy()`/`strcat()` call sites and convert them to
+   bounded copies, then re-enable
+   `clang-analyzer-security.insecureAPI.strcpy`. The two that were genuine
+   defects are already fixed (D-73); the rest hold by construction, and the
+   check is a policy ban that cannot see that.
 

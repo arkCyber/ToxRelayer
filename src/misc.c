@@ -295,7 +295,11 @@ int get_conference_nick_truncate(Tox *m, char *buf, uint32_t peernum, uint32_t c
     return len;
 
 on_error:
-    strcpy(buf, UNKNOWN_NAME);
+    /* Bounded: the contract of this function is that `buf` holds
+     * TOXIC_MAX_NAME_LENGTH bytes, which is the same size the success path
+     * writes up to. */
+    copy_tox_str(buf, TOXIC_MAX_NAME_LENGTH, UNKNOWN_NAME,
+                 (uint16_t) strlen(UNKNOWN_NAME));
     len = strlen(UNKNOWN_NAME);
     buf[len] = '\0';
     return len;

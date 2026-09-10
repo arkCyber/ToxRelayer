@@ -2037,16 +2037,28 @@ void evaluate_input( Tox *tox,char *user_input )
 
     }else
     if( strstr(user_input,"/id") != NULL ) {
-            char* id = (char*) malloc(TOX_ADDRESS_SIZE * 2 * sizeof(char) + 1);
+            const size_t id_size = ((size_t) TOX_ADDRESS_SIZE * 2) + 1;
+            char* id = (char*) malloc(id_size);
             char address[TOX_ADDRESS_SIZE];
             tox_self_get_address(tox, (uint8_t*) address);
 
-            for (size_t i = 0; i < TOX_ADDRESS_SIZE; ++i) {
-                char a[3];
-                snprintf(a, sizeof(a), "%02X", address[i] & 0xff);
-                strcat(id, a);
+            if (id == NULL) {
+                console_out("Out of memory\n");
+                return;
             }
-            console_out(" web3-id: \n %s\n\n",id);
+
+            /* Bounded writes. This used strcat() into the fresh buffer, but
+             * malloc() does not initialise memory, so strcat() began scanning
+             * from whatever the heap happened to hold: undefined behaviour, and
+             * a write past the allocation whenever the first byte was nonzero.
+             * Each iteration needs two digits plus a terminator, which always
+             * fit in the space that is left. */
+            for (size_t i = 0; i < TOX_ADDRESS_SIZE; ++i) {
+                snprintf(id + (i * 2), id_size - (i * 2), "%02X", address[i] & 0xff);
+            }
+
+            console_out(" web3-id: \n %s\n\n", id);
+            free(id);
             local_node_info_display( tox );
         ;
     }else
@@ -2137,7 +2149,13 @@ void evaluate_input( Tox *tox,char *user_input )
     if( strstr(user_input,"/cur") != NULL)    // /cur channal info
     {
         char name[256];
-        char* id = (char*) malloc(((size_t) TOX_PUBLIC_KEY_SIZE * 2) + 1);
+        const size_t id_size = ((size_t) TOX_PUBLIC_KEY_SIZE * 2) + 1;
+        char* id = (char*) malloc(id_size);
+
+        if (id == NULL) {
+            console_out("Out of memory\n");
+            return;
+        }
 
         int friend_size = tox_friend_get_name_size(tox,pre_friendnumber,NULL);
         tox_friend_get_name(tox,pre_friendnumber,(uint8_t*)name,NULL);
@@ -2146,12 +2164,14 @@ void evaluate_input( Tox *tox,char *user_input )
 
         tox_friend_get_public_key(tox,pre_friendnumber,(uint8_t*)name,NULL);
         //name[76] = 0;
+
+        /* Bounded, and initialised by the first write; see the note in the /id
+         * handler for what the previous strcat() version did wrong. */
         for (size_t i = 0; i < TOX_PUBLIC_KEY_SIZE; ++i) {
-                char a[3];
-                snprintf(a, sizeof(a), "%02X", name[i] & 0xff);
-                strcat(id, a);
+                snprintf(id + (i * 2), id_size - (i * 2), "%02X", name[i] & 0xff);
         }
         console_out(">> PublicKey :\n   %s\n",id);
+        free(id);
 
     }
     else

@@ -10,7 +10,17 @@ LIBS = toxcore sqlite3
 # bringing up a new compiler or platform.
 WERROR ?= -Werror
 
-CFLAGS += -std=c11 -Wall -Wextra $(WERROR) -g -D_XOPEN_SOURCE_EXTENDED -D_XOPEN_SOURCE -D_FILE_OFFSET_BITS=64
+# Feature-test macros.
+#
+# _DEFAULT_SOURCE is what glibc needs for mkdtemp(): it is declared under
+# __USE_MISC, which only _DEFAULT_SOURCE enables, so without it every suite that
+# creates its temporary directory failed to compile on Linux with an implicit
+# declaration while macOS was happy.
+#
+# Do not "modernise" the bare -D_XOPEN_SOURCE into -D_XOPEN_SOURCE=700: that
+# value makes Darwin's headers present the POSIX view and hide mkdtemp() there
+# instead, which was verified by building the suites on both.
+CFLAGS += -std=c11 -Wall -Wextra $(WERROR) -g -D_XOPEN_SOURCE_EXTENDED -D_XOPEN_SOURCE -D_DEFAULT_SOURCE -D_FILE_OFFSET_BITS=64
 OBJ = toxrelayer.o misc.o commands.o groupchats.o log.o msg_queue.o mq_persist.o minIni.o msg_database.o telegram.o relay.o
 CFLAGS += $(shell pkg-config --cflags $(LIBS))
 LDFLAGS += $(shell pkg-config --libs $(LIBS))
