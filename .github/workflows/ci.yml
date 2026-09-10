@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+  workflow_dispatch:
+
+# The workflow only reads the repository.
+permissions:
+  contents: read
+
+# A newer push to the same branch supersedes the run in progress.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Package names are the distribution's. libtoxcore-dev provides tox.h,
+      # toxav.h and the pkg-config file; adjust if a runner image changes.
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes build-essential pkg-config \
+            libtoxcore-dev libsqlite3-dev
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install pkg-config toxcore sqlite
+
+      - name: Toolchain versions
+        run: |
+          cc --version
+          pkg-config --modversion toxcore sqlite3
+
+      # -Wall -Wextra -Werror, so this step enforces the coding standard too.
+      - name: Build
+        run: make
+
+      - name: Run the test suites
+        run: make test
+
+      # AddressSanitizer and UndefinedBehaviorSanitizer. Linux only: the
+      # sanitizer runtimes there are the ones the suites are validated against.
+      - name: Run the test suites under ASan + UBSan
+        if: runner.os == 'Linux'
+        run: make test-sanitize
+
+  static-analysis:
+    name: static analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes build-essential pkg-config \
+            libtoxcore-dev libsqlite3-dev clang clang-tidy
+
+      # The enforced check set and every documented deviation live in
+      # .clang-tidy. Any new finding fails the job.
+      - name: clang static analyzer and clang-tidy
+        run: make analyze-strict

@@ -1,0 +1,24 @@
+# Normalise line endings on checkout so the sources are byte-identical
+# everywhere; the code is plain C11 and must not depend on the platform's
+# convention.
+* text=auto eol=lf
+
+# Sources and documents are text.
+*.c        text
+*.h        text
+*.md       text
+*.txt      text
+*.yml      text
+*.yaml     text
+Makefile   text
+.gitignore text
+
+# Data and binaries must never be mangled by line-ending conversion.
+*.wav      binary
+*.tox      binary
+*.db       binary
+*.png      binary
+*.jpg      binary
+
+# Keep the diffs of the two generated documents readable in review.
+docs/*.md  text

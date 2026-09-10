@@ -1,17 +1,74 @@
-*~
-*.swp
+# ---------------------------------------------------------------------------
+# ToxRelayer .gitignore
+#
+# Three kinds of thing are kept out of the repository:
+#   1. build output, which anyone can regenerate with `make`;
+#   2. operator data, above all the toxcore save file, which holds the bot's
+#      private key and must never leave the machine that owns it;
+#   3. local-only material that is not part of the build.
+# ---------------------------------------------------------------------------
+
+# --- Build output -----------------------------------------------------------
 *.o
 *.d
 *.lo
 *.a
-*.out
-*.app
+*.dSYM/
+/toxrelayer
+# Test binaries live in the repository root; anchor the pattern so it cannot
+# also swallow the suite sources under tests/.
+/test_*
+
+# --- Editor and operating-system noise --------------------------------------
+*~
 *.swp
 *.orig
 *.*vim*
-toxbot
+.DS_Store
+.vscode/
+
+# --- Operator data: private keys and runtime state --------------------------
+# The toxcore save file *is* the bot's identity. Committing it publishes the
+# private key, and that can never be undone.
+*.tox
 masterkeys
 blockedkeys
-COPYING
-*.tox
+metaCom.config
+*.db
+*.db-journal
+*.db-wal
+mq_queue.dat
+mq_queue.dat.tmp
 toxbot_save
+
+# --- Local-only material, not part of the build -----------------------------
+# Vendored upstream trees, experiments and pre-remediation leftovers kept in
+# the working copy for reference. None of it is compiled, installed or shipped.
+/ncurses_programs/
+/.dist/
+/src/new_meta/
+/src/impl/
+/src/sounds/
+/src/data
+/src/toxkey
+/src/metaChatMsg.db
+/src/base64.c
+/src/base64.h
+/src/hydrogen.c
+/src/hydrogen.h
+/src/database.c
+/src/database.h
+/src/db_chat_test.c
+/src/dbt01.c
+/src/dbtest.c
+/src/hello.c
+/src/kb_test.c
+/src/qr_code.c
+/src/qr_code.h
+/src/qrencode.h
+/src/qtest.c
+/src/toxkey.c
+/src/tox@xx.h
+/src/tox_old.h
+/src/xxhash.h
+

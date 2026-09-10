@@ -1,22 +1,5 @@
-/*  log.c
- *
- *
- *  Copyright (C) 2021 toxbot All Rights Reserved.
- *
- *  This file is part of toxbot.
- *
- *  toxbot is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  toxbot is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with toxbot. If not, see <http://www.gnu.org/licenses/>.
+/*  
+    log.c
  *
  */
 
@@ -24,45 +7,86 @@
 #include <stdarg.h>
 
 #include "misc.h"
+#include "log.h"
 
-#define TIMESTAMP_SIZE 64
-#define MAX_MESSAGE_SIZE 512
+#define TIMESTAMP_SIZE          64
+#define MAX_MESSAGE_SIZE        512
 
+//
 static struct tm *get_wall_time(void)
 {
     struct tm *timeinfo;
     time_t t = get_time();
     timeinfo = localtime((const time_t *) &t);
+
     return timeinfo;
 }
-
+//
 void log_timestamp(const char *message, ...)
 {
     char format[MAX_MESSAGE_SIZE];
 
     va_list args;
     va_start(args, message);
-    vsnprintf(format, sizeof(format), message, args);
+    const int formatted = vsnprintf(format, sizeof(format), message, args);
     va_end(args);
 
+    if (formatted < 0) {
+        return;                     /* formatting failed: nothing useful to log */
+    }
+
     char ts[TIMESTAMP_SIZE];
-    strftime(ts, TIMESTAMP_SIZE,"[%H:%M:%S]", get_wall_time());
+    const size_t stamped = strftime(ts, TIMESTAMP_SIZE, "[%H:%M:%S]", get_wall_time());
 
-    printf("%s %s\n", ts, format);
+    if (stamped == 0) {
+        ts[0] = '\0';
+    }
+
+    console_out("%s %s\n", ts, format);
 }
-
+//
 void log_error_timestamp(int err, const char *message, ...)
 {
     char format[MAX_MESSAGE_SIZE];
 
     va_list args;
     va_start(args, message);
-    vsnprintf(format, sizeof(format), message, args);
+    const int formatted = vsnprintf(format, sizeof(format), message, args);
     va_end(args);
 
-    char ts[TIMESTAMP_SIZE];
-    strftime(ts, TIMESTAMP_SIZE,"[%H:%M:%S]", get_wall_time());
+    if (formatted < 0) {
+        return;
+    }
 
-    fprintf(stderr, "%s %s (error %d)\n", ts, format, err);
+    char ts[TIMESTAMP_SIZE];
+    const size_t stamped = strftime(ts, TIMESTAMP_SIZE, "[%H:%M:%S]", get_wall_time());
+
+    if (stamped == 0) {
+        ts[0] = '\0';
+    }
+
+    console_err("%s %s (error %d)\n", ts, format, err);
+}
+//---------------------------------------------------------------------------
+//  Console output. See log.h for the contract: the result of the underlying
+//  write is observed here once instead of being ignored at every call site.
+//---------------------------------------------------------------------------
+void console_out(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    const int written = vprintf(format, args);
+    va_end(args);
+
+    (void) written;                 /* a console write failure is not actionable */
 }
 
+void console_err(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    const int written = vfprintf(stderr, format, args);
+    va_end(args);
+
+    (void) written;
+}

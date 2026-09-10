@@ -1,0 +1,57 @@
+# Static-analysis profile for the metaRelayer store-and-forward bot.
+#
+# This file is part of the coding standard: it defines which checks are enforced
+# and records every deliberate deviation with its justification. Run it with
+#      make analyze
+#
+# A deviation is only acceptable when the rationale is written down here.
+---
+Checks: >
+  -*,
+  clang-analyzer-*,
+  bugprone-*,
+  cert-*,
+  performance-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+
+WarningsAsErrors: 'clang-analyzer-*,cert-*'
+
+CheckOptions:
+  # Longest identifier accepted before readability checks complain.
+  readability-identifier-length.MinimumVariableNameLength: 1
+
+# ---------------------------------------------------------------------------
+# Documented deviations
+# ---------------------------------------------------------------------------
+# bugprone-easily-swappable-parameters
+#   The store-and-forward APIs take several integer parameters of the same
+#   width, for example
+#       mq_enqueue(int friendnum, time_t now, const char *payload, size_t len)
+#       msg_database_add(int friend_num, int msg_sn, time_t datetime, ...)
+#   These signatures are deliberate mirror images of the on-the-wire telegram
+#   fields. Every call site is covered by unit tests that would fail if two
+#   arguments were transposed (see tests/test_msg_queue.c and
+#   tests/test_msg_database.c), so the advisory check is not enforced.
+#
+# bugprone-narrowing-conversions
+#   toxcore and sqlite3 exchange values through 8/16/32 bit integer types.
+#   Conversions are explicit at the boundary (see tox_transport() in toxbot.c
+#   and the sqlite3_bind_* calls in msg_database.c) and verified by tests.
+#
+# cert-err34-c
+#   Enforced. Every integer that used to come from atoi()/atol() now goes through
+#   parse_int_range() in misc.c, which checks the entire string, tests errno for
+#   overflow and range-checks the result; the strtol() calls in telegram.c check
+#   their end pointers and range-check the parsed serial. The check is enabled so
+#   that a new unchecked conversion cannot be introduced.
+#
+# clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+#   The check demands the C11 Annex K "_s" functions (fprintf_s, sscanf_s, ...).
+#   Annex K is optional, is not implemented by glibc or the macOS libc, and is
+#   not portable to the platforms this relay targets. The bounded C11 functions
+#   that are available (snprintf, vsnprintf, fgets) are used throughout, and the
+#   one sscanf("%2x") call has been replaced by explicit bounded decoding.
+#   Enforcing this check would require non-portable code, so it is disabled
+#   deliberately rather than making the code unportable.

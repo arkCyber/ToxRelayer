@@ -1,0 +1,7 @@
+# Issue chooser configuration.
+#
+# Security reports must not go through the public issue tracker; the guidance
+# lives in SECURITY.md, which GitHub links from the Security tab. If you later
+# want to advertise a Discussions forum or your own advisory form here, add a
+# `contact_links:` list with the full URL to your fork.
+blank_issues_enabled: true

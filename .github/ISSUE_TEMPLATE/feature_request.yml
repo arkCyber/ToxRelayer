@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest a capability or a behaviour change
+labels: [ enhancement ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the problem first. A request phrased as "X does not work
+        when Y" is far easier to evaluate than a proposed implementation.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What can you not do today, and what does that cost you?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+      description: What should happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Including doing nothing, and whether a workaround exists today.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Delivery queue / store-and-forward
+        - Relay routing and sequencing
+        - Message archive
+        - Commands
+        - Build, tests or tooling
+        - Documentation
+        - Other
+    validations:
+      required: true

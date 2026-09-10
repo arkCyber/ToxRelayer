@@ -1,0 +1,65 @@
+name: Bug report
+description: Something behaves incorrectly, crashes, or loses data
+labels: [ bug ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a security problem, please do **not** open an issue: use the
+        *Report a vulnerability* form on the Security tab (see SECURITY.md).
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did the relayer do, and what did you expect instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the commands or messages involved. Redact public keys and addresses.
+      placeholder: |
+        1. Start the relayer with ...
+        2. Send `/gmessage ...`
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Impact
+      options:
+        - Crash or data loss
+        - Wrong behaviour (delivery, routing, sequencing)
+        - Build or tooling
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Output of `git rev-parse --short HEAD`, and the version printed at start-up.
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, compiler, `pkg-config --modversion toxcore`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: The relayer's stdout/stderr. Redact anything identifying.
+      render: shell
