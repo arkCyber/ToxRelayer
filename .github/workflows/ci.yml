@@ -22,7 +22,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
+        # Pinned images, not -latest: the gate must not change underneath a
+        # commit because a runner image moved to a newer compiler. Bump these
+        # deliberately, and re-run the suites when you do.
+        os: [ ubuntu-24.04, macos-14 ]
 
     steps:
       - uses: actions/checkout@v4
@@ -60,7 +63,7 @@ jobs:
 
   static-analysis:
     name: static analysis
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4

@@ -56,6 +56,10 @@
 #endif
 #if !defined strnicmp && !defined PORTABLE_STRNICMP
   #if defined __LINUX__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __APPLE__
+    /* strncasecmp() is declared by <strings.h>, not by <string.h>. Darwin's
+     * <string.h> happens to include <strings.h>, glibc's does not, so without
+     * this line the mapping below produces an implicit declaration. */
+    #include <strings.h>
     #define strnicmp  strncasecmp
   #endif
 #endif

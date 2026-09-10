@@ -664,6 +664,8 @@ with GCC.
 | D-67 | `numfriends < 0` compared an unsigned value | GCC reports `-Werror=type-limits`; clang does not implement that warning | Fixed: the dead comparison is gone |
 | D-68 | `console_out("... %lu", TOX_ADDRESS_SIZE)` did not match its format | toxcore 0.2.18 expands `TOX_ADDRESS_SIZE` to a `size_t` expression, so `%lu` was correct there; 0.2.23 defines it as the plain integer `38`, so it is wrong | Fixed: the value is cast to `long` and printed with `%ld`, which is correct against both |
 | D-69 | `chat_tx_Control[MAX_Friend_NUM]` was **defined** in `toxrelayer.h`, so every translation unit that included it emitted its own copy | A tentative definition is merged by older toolchains; GCC 10+ and LLVM 11+ default to `-fno-common` and fail at link with `duplicate symbol`. Apple clang still defaults to `-fcommon`, so macOS linked and Linux would not | Fixed: the header declares it `extern` and `toxrelayer.c` defines it once |
+| D-70 | `src/minIni.c` maps `strnicmp` to `strncasecmp`, which is declared in `<strings.h>`, but the file only included `<string.h>` | Darwin's `<string.h>` includes `<strings.h>`, glibc's does not | Fixed: the include is added where the mapping is defined, so the Windows path is untouched |
+| D-71 | The analysis gate's verdict depended on the clang-tidy version: 18 reports every ignored `snprintf()` return (glibc declares the fortified `snprintf()` with `warn_unused_result`), 21 reports none of the same 44 call sites | the same commit passed locally and failed in CI | Fixed twice over: `cert-err33-c` is now a documented deviation in `.clang-tidy`, and the CI images are pinned (`ubuntu-24.04`, `macos-14`) so the toolchain cannot drift unnoticed |
 
 ### What this validates
 
@@ -720,4 +722,7 @@ with GCC.
 7. Rename the toxcore save file `toxbot.tox` to match the project, via an
    explicit and failure-safe migration (extend `legacy_data_file_rename()`), so
    that an existing identity is moved rather than replaced.
+8. Audit the ignored `snprintf()` return values by hand (the deviation for
+   `cert-err33-c` explains why this is not done mechanically): decide for each
+   whether truncation is acceptable or should be detected and reported.
 
