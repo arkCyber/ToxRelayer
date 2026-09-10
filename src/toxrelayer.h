@@ -90,7 +90,15 @@ struct Chat_TX_Control {
     int     send_number;        // sending msg serial number
     int     receive_number;     // receive msg serial number
     int     tele_send_number;   // VIP: sending msg tele-serial number
-} chat_tx_Control[MAX_Friend_NUM];
+};
+
+/* One entry per friend number, defined once in toxrelayer.c.
+ *
+ * This used to be a definition in the header. That is a tentative definition, so
+ * every translation unit that included the header emitted its own copy; older
+ * toolchains merged them silently, but GCC 10+ and LLVM 11+ compile with
+ * -fno-common and fail at link time with "duplicate symbol". */
+extern struct Chat_TX_Control chat_tx_Control[MAX_Friend_NUM];
 
 
 

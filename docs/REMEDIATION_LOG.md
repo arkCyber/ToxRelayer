@@ -648,6 +648,52 @@ distribution's defaults but were not verified on a Linux host.
 
 ---
 
+## Increment 11 — The first CI run found what macOS had hidden
+
+The workflow added in increment 10 failed on its first run, on both platforms.
+Every failure was a **real portability defect** that the local toolchain
+(Apple clang 14, toxcore 0.2.18) could not see: the suites, the sanitizers and
+the analyzer were all green locally while the project did not compile at all
+with GCC.
+
+### Defects
+
+| ID | Defect | Why the local build missed it | Status |
+|----|--------|-------------------------------|--------|
+| D-66 | `src/toxrelayer.c` called 41 string and memory functions without including `<string.h>`; it included `<strings.h>`, the BSD interface, instead | Darwin's `<strings.h>` pulls in `<string.h>`; glibc's does not. Apple clang 14 also only warned about the implicit declarations, while newer clang and gcc make them errors | Fixed: `<string.h>` is included |
+| D-67 | `numfriends < 0` compared an unsigned value | GCC reports `-Werror=type-limits`; clang does not implement that warning | Fixed: the dead comparison is gone |
+| D-68 | `console_out("... %lu", TOX_ADDRESS_SIZE)` did not match its format | toxcore 0.2.18 expands `TOX_ADDRESS_SIZE` to a `size_t` expression, so `%lu` was correct there; 0.2.23 defines it as the plain integer `38`, so it is wrong | Fixed: the value is cast to `long` and printed with `%ld`, which is correct against both |
+| D-69 | `chat_tx_Control[MAX_Friend_NUM]` was **defined** in `toxrelayer.h`, so every translation unit that included it emitted its own copy | A tentative definition is merged by older toolchains; GCC 10+ and LLVM 11+ default to `-fno-common` and fail at link with `duplicate symbol`. Apple clang still defaults to `-fcommon`, so macOS linked and Linux would not | Fixed: the header declares it `extern` and `toxrelayer.c` defines it once |
+
+### What this validates
+
+* A green `make test` on one machine is not evidence that the project builds on
+  another. The gates are only as strong as the toolchain running them, which is
+  precisely what the CI matrix turns into a fact.
+* The CI build stops at the first translation unit that fails, so it had reached
+  only `toxrelayer.o`. All eleven build units were therefore re-checked locally
+  with a newer clang under `-Wall -Wextra -Werror -Wtype-limits` before the fix
+  was pushed, rather than fixing one failure at a time through the CI loop. That
+  is what surfaced D-69: the link is only reached after every object compiles.
+* Reproducing the platform is part of the work. A second toolchain on the same
+  machine (Homebrew LLVM clang 21, which defaults to `-fno-common` and rejects
+  implicit declarations) reproduced the Linux failures exactly, including the
+  link error, without needing a Linux host.
+
+### Verification
+
+| Check | Result |
+|-------|--------|
+| `make` with Apple clang 14 | 0 warnings, 0 errors |
+| `make` with Homebrew LLVM clang 21 (incl. link) | 0 warnings, 0 errors, binary produced |
+| `make test` with Homebrew LLVM clang 21 | 10 suites, 135 812 assertions, 0 failures |
+| All sources under `-Wtype-limits` with clang 21 | clean |
+| Test suites (Apple clang) | 10, 135 812 assertions, 0 failures |
+| Sanitizers | clean |
+| Static-analysis findings | 0 |
+
+---
+
 ## Remaining work
 
 1. Decide on the group-chat invite gate: `cb_group_invite()` accepts an

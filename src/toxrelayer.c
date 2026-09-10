@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -112,6 +113,9 @@ int max_friend_num = 0;
 volatile sig_atomic_t FLAG_EXIT = false;    /* set on SIGINT */
 
 struct Tox_Bot Tox_Bot;
+
+/* Defined here and declared extern in toxrelayer.h; see the note there. */
+struct Chat_TX_Control chat_tx_Control[MAX_Friend_NUM];
 
 static struct Options {
     TOX_PROXY_TYPE    proxy_type;
@@ -329,8 +333,8 @@ void get_relay_name_list( Tox *m )
     uint32_t numfriends = tox_self_get_friend_list_size(m);
     // tox_self_get_friend_list(m, list);
 
-    if( numfriends < 0 || numfriends > MAX_Friend_NUM ) {
-        console_out("number of friends outside : %d\n", numfriends);
+    if( numfriends > MAX_Friend_NUM ) {
+        console_out("number of friends outside : %lu\n", (unsigned long) numfriends);
         return;
     }
 
@@ -2159,7 +2163,10 @@ void evaluate_input( Tox *tox,char *user_input )
 
         int len = strlen(token);
         if( len != TOX_ADDRESS_SIZE*2 ) {
-            console_out("\nInvald address,please try again! %d %lu\n",len, TOX_ADDRESS_SIZE);
+            /* TOX_ADDRESS_SIZE is an int in current toxcore and was a size_t
+             * expression in older ones, so cast once to a type both agree on. */
+            console_out("\nInvalid address, please try again! %d %ld\n", len,
+                        (long) TOX_ADDRESS_SIZE);
             return;
         }
 
